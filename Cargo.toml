@@ -1,0 +1,13 @@
+[package]
+name = "wof-tools"
+version = "0.1.0"
+authors = ["Sam Vevang <sam.vevang@gmail.com>"]
+
+
+[dependencies]
+git2 = "0.6"
+docopt = "0.8"
+serde = "1.0"
+serde_derive = "1.0"
+time = "0.1"
+tempdir = "0.3"
