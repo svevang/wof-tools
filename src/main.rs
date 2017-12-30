@@ -1,56 +1,47 @@
-/*
- * libgit2 "log" example - shows how to walk history and get commit info
- *
- * Written by the libgit2 contributors
- *
- * To the extent possible under law, the author(s) have dedicated all copyright
- * and related and neighboring rights to this software to the public domain
- * worldwide. This software is distributed without any warranty.
- *
- * You should have received a copy of the CC0 Public Domain Dedication along
- * with this software. If not, see
- * <http://creativecommons.org/publicdomain/zero/1.0/>.
- */
-
 #[macro_use]
 extern crate serde_derive;
 extern crate docopt;
-extern crate git2;
 extern crate time;
+extern crate walkdir;
+extern crate rayon;
 
 use std::str;
-use std::path::Path;
+use std::error::Error;
+use std::fs::File;
+use std::io::prelude::*;
 
 use docopt::Docopt;
-use git2::{Repository, ObjectType};
-use git2::{Error};
+
+use walkdir::WalkDir;
+
+use rayon::prelude::*;
 
 #[derive(Deserialize)]
 struct Args {
-    flag_git_dir: Option<String>,
+    flag_wof_data_dir: Option<String>,
 }
 
-fn run(args: &Args) -> Result<(), Error> {
-    let path = args.flag_git_dir.as_ref().map(|s| &s[..]).unwrap_or(".");
-    let repo = Repository::open(path)?;
+fn run(args: &Args) -> Result<(), Box<Error>> {
+    let wof_path = args.flag_wof_data_dir.as_ref().map(|s| &s[..]).unwrap();
+    println!("loading geojson from {}", wof_path);
 
-    println!("looking for wof geojson in {}", repo.path().to_string_lossy());
+    let paths: Vec<_> = WalkDir::new(wof_path)
+        .follow_links(true)
+        .into_iter()
+        .filter_map(|f| f.ok())       // filter out errors (silently!)
+        .map(|f| f.path().to_owned()) // take the path and take ownership
+        .collect();                   // collect into whatever list is
 
-    let index = repo.index().unwrap();
+    paths.par_iter().for_each (|file_path| {
 
-    for index_entry in index.iter() {
-        let path_name = String::from_utf8(index_entry.path).unwrap();
-        println!("path name {}", path_name);
-        println!("looking!");
-        let object = match repo.find_object(index_entry.id, Some(ObjectType::Blob)) {
-            Ok(i) => i,
-            Err(err) => continue,
-        };
-        let blob = object.as_blob();
-        //println!("path: {} OID: {}", String::from_utf8(index_entry.path).unwrap(), index_entry.id);
-        let path = Path::new(&path_name);
-        //path.display();
-    }
+        if file_path.is_file() {
+            let mut file = File::open(file_path).unwrap();
+            let mut contents = Vec::new();
+            file.read_to_end(&mut contents).unwrap();
+            println!("{} length: {}", file_path.display(), contents.len() );
+        }
+
+    });
 
     Ok(())
 }
@@ -58,10 +49,10 @@ fn run(args: &Args) -> Result<(), Error> {
 
 fn main() {
     const USAGE: &'static str = "
-usage: log [options] [<commit>..] [--] [<spec>..]
+usage: wof-tools [options]
 
 Options:
-    --git-dir <dir>         alternative git directory to use
+    --wof-data-dir <dir>    wof directory to use
     -h, --help              show this message
 ";
 

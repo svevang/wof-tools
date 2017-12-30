@@ -5,7 +5,8 @@ authors = ["Sam Vevang <sam.vevang@gmail.com>"]
 
 
 [dependencies]
-git2 = "0.6"
+rayon = "0.9"
+walkdir = "2"
 docopt = "0.8"
 serde = "1.0"
 serde_derive = "1.0"
