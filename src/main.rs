@@ -4,6 +4,10 @@ extern crate rayon;
 #[macro_use]
 extern crate serde_derive;
 extern crate time;
+extern crate geojson;
+
+use geojson::{GeoJson};
+use parse_geojson::process_geojson;
 
 use std::str;
 use std::error::Error;
@@ -14,6 +18,8 @@ use std::path::Path;
 use docopt::Docopt;
 use git2::Repository;
 use rayon::prelude::*;
+
+mod parse_geojson;
 
 #[derive(Deserialize)]
 struct Args {
@@ -49,6 +55,10 @@ fn run(args: &Args) -> Result<(), Box<Error>> {
             let mut contents = Vec::new();
             file.read_to_end(&mut contents).unwrap();
             println!("{} length: {}", file_path.display(), contents.len());
+
+            let geojson_str = String::from_utf8(contents).unwrap();
+            let geojson = geojson_str.parse::<GeoJson>().unwrap();
+            process_geojson(&geojson);
         }
     });
 
